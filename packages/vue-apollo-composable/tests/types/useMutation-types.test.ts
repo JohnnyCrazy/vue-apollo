@@ -1,5 +1,5 @@
 import { FetchResult } from "apollo-link";
-import { useMutation } from "../../src";
+import { useMutation, MutateWithOptionalVariables, MutateWithRequiredVariables } from "../../src";
 import {
   ExampleDocument,
   ExampleUpdateMutation,
@@ -87,13 +87,13 @@ import { assertExactType } from "./assertions";
 }
 
 // =============================================================================
-// With all things typed and with options
+// With all things typed and with options and variables
 // - TResult should be the mutation type
 // - TVariables should be the variables type
 // =============================================================================
 {
-  const withOptionsVariables = { id: "1", example: { name: "new" } };
-  const withOptions = useMutation<ExampleUpdateMutation, ExampleUpdateMutationVariables>(
+  const variables = { id: "1", example: { name: "new" } };
+  const withOptionsAndVariables = useMutation<ExampleUpdateMutation, ExampleUpdateMutationVariables>(
     ExampleDocument,
     {
       awaitRefetchQueries: true,
@@ -114,12 +114,82 @@ import { assertExactType } from "./assertions";
           return {};
         }
       },
-      variables: withOptionsVariables
+      variables,
     }
   );
 
-  withOptions.onDone(param => {
-    assertExactType<typeof param, FetchResult<ExampleUpdateMutation> | undefined>(param);
+  assertExactType<typeof withOptionsAndVariables.mutate, MutateWithOptionalVariables<ExampleUpdateMutation, ExampleUpdateMutationVariables>>(
+    withOptionsAndVariables.mutate
+  )
+
+  withOptionsAndVariables.onDone(param => {
+    assertExactType<typeof param, FetchResult<ExampleUpdateMutation>>(param);
+    assertExactType<typeof param.data.exampleUpdate, ExampleUpdatePayload>(
+      param.data.exampleUpdate
+    );
+  });
+}
+
+// =============================================================================
+// With all things typed and without options
+// - TResult should be the mutation type
+// - TVariables should be the variables type
+// - mutate should have a required variables parameter
+// =============================================================================
+{
+  const withNoOptions = useMutation<ExampleUpdateMutation, ExampleUpdateMutationVariables>(
+    ExampleDocument
+  );
+
+  assertExactType<typeof withNoOptions.mutate, MutateWithRequiredVariables<ExampleUpdateMutation, ExampleUpdateMutationVariables>>(
+    withNoOptions.mutate
+  )
+
+  withNoOptions.onDone(param => {
+    assertExactType<typeof param, FetchResult<ExampleUpdateMutation>>(param);
+    assertExactType<typeof param.data.exampleUpdate, ExampleUpdatePayload>(
+      param.data.exampleUpdate
+    );
+  });
+}
+
+// =============================================================================
+// With all things typed and with options, but without variables
+// - TResult should be the mutation type
+// - TVariables should be the variables type
+// - mutate should have a required variables parameter
+// =============================================================================
+{
+  const withNoVariablesInOptions = useMutation<ExampleUpdateMutation, ExampleUpdateMutationVariables>(
+    ExampleDocument,
+    {
+      awaitRefetchQueries: true,
+      clientId: "37Hn7m",
+      context: "any",
+      errorPolicy: "all",
+      fetchPolicy: "cache-first",
+      optimisticResponse: (vars: ExampleUpdateMutationVariables) => ({
+        exampleUpdate: { example: { id: "" } }
+      }),
+      refetchQueries: ["firstQuery", "secondQuery"],
+      update: (proxy, mutationResult: FetchResult<ExampleUpdateMutation>) => {
+        mutationResult.data?.exampleUpdate;
+      },
+      updateQueries: {
+        query: (result, options) => {
+          options.mutationResult.data?.exampleUpdate;
+          return {};
+        }
+      }
+    }
+  );
+
+  assertExactType<typeof withNoVariablesInOptions.mutate, MutateWithRequiredVariables<ExampleUpdateMutation, ExampleUpdateMutationVariables>>(
+    withNoVariablesInOptions.mutate
+  )
+
+  withNoVariablesInOptions.onDone(param => {
+    assertExactType<typeof param, FetchResult<ExampleUpdateMutation>>(param);
     assertExactType<typeof param.data.exampleUpdate, ExampleUpdatePayload>(
       param.data.exampleUpdate
     );

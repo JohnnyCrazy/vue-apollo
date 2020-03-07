@@ -7,13 +7,22 @@ import { ReactiveFunction } from './util/ReactiveFunction'
 import { useEventHook } from './util/useEventHook'
 import { trackMutation } from './util/loadingTracking'
 
+type MutateOverrideOptions = Pick<UseMutationOptions<any, OperationVariables>,
+  'update' | 'optimisticResponse' | 'context' |
+  'updateQueries' | 'refetchQueries' | 'awaitRefetchQueries' |
+  'errorPolicy' | 'fetchPolicy' | 'clientId'>
+type MutateResult<TResult> = Promise<FetchResult<TResult, Record<string, any>, Record<string, any>>>
+
+export type MutateWithOptionalVariables<TResult, TVariables> = (variables?: TVariables, overrideOptions?: MutateOverrideOptions) => MutateResult<TResult>
+export type MutateWithRequiredVariables<TResult, TVariables> = (variables: TVariables, overrideOptions?: MutateOverrideOptions) => MutateResult<TResult>
+
 /**
  * `useMutation` options for mutations that don't require `variables`.
  */
 export interface UseMutationOptions<
   TResult = any,
   TVariables = OperationVariables
-> extends Omit<MutationOptions<TResult, TVariables>, 'mutation'> {
+  > extends Omit<MutationOptions<TResult, TVariables>, 'mutation'> {
   clientId?: string
 }
 
@@ -23,28 +32,27 @@ export interface UseMutationOptions<
 export type UseMutationOptionsNoVariables<
   TResult = any,
   TVariables = OperationVariables
-> = Omit<UseMutationOptions<TResult, TVariables>, 'variables'>
+  > = Omit<UseMutationOptions<TResult, TVariables>, 'variables'>
 
 /**
  * `useMutation` options for mutations require variables.
  */
 export interface UseMutationOptionsWithVariables<
   TResult = any,
-  TVariables = OperationVariables
-> extends UseMutationOptions<TResult, TVariables> {
+  TVariables = OperationVariables> extends UseMutationOptions<TResult, TVariables> {
   variables: TVariables
 }
 
-export interface UseMutationReturn<TResult, TVariables> {
-  mutate: (variables?: TVariables, overrideOptions?: Pick<UseMutationOptions<any, OperationVariables>, 'update' | 'optimisticResponse' | 'context' | 'updateQueries' | 'refetchQueries' | 'awaitRefetchQueries' | 'errorPolicy' | 'fetchPolicy' | 'clientId'>) => Promise<FetchResult<any, Record<string, any>, Record<string, any>>>
+export interface UseMutationReturn<TResult, TVariables, Mutate = MutateWithOptionalVariables<TResult, TVariables>> {
+  mutate: Mutate
   loading: Ref<boolean>
   error: Ref<Error>
   called: Ref<boolean>
   onDone: (fn: (param?: FetchResult<TResult, Record<string, any>, Record<string, any>>) => void) => {
-      off: () => void
+    off: () => void
   };
   onError: (fn: (param?: Error) => void) => {
-      off: () => void
+    off: () => void
   };
 };
 
@@ -71,10 +79,18 @@ export function useMutation<TResult = any, TVariables extends OperationVariables
   options: UseMutationOptionsWithVariables<TResult, TVariables> | ReactiveFunction<UseMutationOptionsWithVariables<TResult, TVariables>>
 ): UseMutationReturn<TResult, TVariables>
 
+/**
+ * Use a mutation that requires variables, but without a default.
+ */
+export function useMutation<TResult = any, TVariables extends OperationVariables = OperationVariables>(
+  document: DocumentNode | ReactiveFunction<DocumentNode>,
+  options?: UseMutationOptionsNoVariables<TResult, undefined> | ReactiveFunction<UseMutationOptionsNoVariables<TResult, undefined>>
+): UseMutationReturn<TResult, TVariables, MutateWithRequiredVariables<TResult, TVariables>>
+
 export function useMutation<
   TResult,
   TVariables extends OperationVariables
-> (
+>(
   document: DocumentNode | Ref<DocumentNode> | ReactiveFunction<DocumentNode>,
   options?: UseMutationOptions<TResult, TVariables> | Ref<UseMutationOptions<TResult, TVariables>> | ReactiveFunction<UseMutationOptions<TResult, TVariables>>,
 ): UseMutationReturn<TResult, TVariables> {
@@ -91,7 +107,7 @@ export function useMutation<
   // Apollo Client
   const { resolveClient } = useApolloClient()
 
-  async function mutate (variables?: TVariables, overrideOptions: Omit<UseMutationOptions, 'variables'> = {}) {
+  async function mutate(variables?: TVariables, overrideOptions: Omit<UseMutationOptions, 'variables'> = {}) {
     let currentDocument: DocumentNode
     if (typeof document === 'function') {
       currentDocument = document()
