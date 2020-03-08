@@ -401,7 +401,7 @@ export function useQuery<
         item.unsubscribeFns.forEach(fn => fn())
         item.unsubscribeFns = []
       })
-    })
+    }, { immediate: true })
   }
 
   function addSubscribeToMore(item: SubscribeToMoreItem) {

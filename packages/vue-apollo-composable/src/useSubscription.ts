@@ -199,6 +199,7 @@ export function useSubscription<
     restart()
   }, {
     deep: true,
+    immediate: true,
   })
 
   // Applying document
