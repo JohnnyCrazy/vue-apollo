@@ -1,21 +1,21 @@
-import { Ref, computed } from '@vue/composition-api'
 import { ExtractSingleKey } from './util/ExtractSingleKey'
+import { Ref, computed } from 'vue'
 
 export type UseResultReturn<T> = Readonly<Ref<Readonly<T>>>
 
-  /**
- * Resolve a `result`, returning either the first key of the `result` if there
- * is only one, or the `result` itself. The `value` of the ref will be
- * `undefined` until it is resolved.
- *
- * @example
- * const { result } = useQuery(...)
- * const user = useResult(result)
- * // user is `void` until the query resolves
- *
- * @param  {Ref<TResult>} result A `result` returned from `useQuery` to resolve.
- * @returns Readonly ref with `void` or the resolved `result`.
- */
+/**
+* Resolve a `result`, returning either the first key of the `result` if there
+* is only one, or the `result` itself. The `value` of the ref will be
+* `undefined` until it is resolved.
+*
+* @example
+* const { result } = useQuery(...)
+* const user = useResult(result)
+* // user is `void` until the query resolves
+*
+* @param  {Ref<TResult>} result A `result` returned from `useQuery` to resolve.
+* @returns Readonly ref with `void` or the resolved `result`.
+*/
 export function useResult<TResult, TResultKey extends keyof TResult = keyof TResult>(
   result: Ref<TResult>
 ): UseResultReturn<void | ExtractSingleKey<TResult, TResultKey>>
@@ -58,20 +58,20 @@ export function useResult<
   TDefaultValue,
   TReturnValue,
   TResultKey extends keyof TResult = keyof TResult,
->(
-  result: Ref<TResult>,
-  defaultValue: TDefaultValue | undefined,
-  pick: (data: TResult) => TReturnValue
-): UseResultReturn<TDefaultValue | TReturnValue>
+  >(
+    result: Ref<TResult>,
+    defaultValue: TDefaultValue | undefined,
+    pick: (data: TResult) => TReturnValue
+  ): UseResultReturn<TDefaultValue | TReturnValue>
 
 export function useResult<
   TResult,
   TDefaultValue,
   TReturnValue,
-> (
-  result: Ref<TResult>,
-  defaultValue?: TDefaultValue,
-  pick?: (data: TResult) => TReturnValue,
+  >(
+    result: Ref<TResult>,
+    defaultValue?: TDefaultValue,
+    pick?: (data: TResult) => TReturnValue,
 ): UseResultReturn<TResult | TResult[keyof TResult] | TDefaultValue | TReturnValue | undefined> {
   return computed(() => {
     const value = result.value

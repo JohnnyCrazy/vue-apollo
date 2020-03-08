@@ -1,5 +1,3 @@
-import { ref, Ref, isRef, computed, watch, onServerPrefetch, getCurrentInstance, onBeforeUnmount } from '@vue/composition-api'
-import Vue from 'vue'
 import { DocumentNode } from 'graphql'
 import {
   OperationVariables,
@@ -18,11 +16,12 @@ import { paramToRef } from './util/paramToRef'
 import { paramToReactive } from './util/paramToReactive'
 import { useEventHook } from './util/useEventHook'
 import { trackQuery } from './util/loadingTracking'
+import { nextTick, Ref, ref, getCurrentInstance, watch, isRef, computed, onBeforeUnmount } from 'vue'
 
 export interface UseQueryOptions<
   TResult = any,
   TVariables = OperationVariables
-> extends Omit<WatchQueryOptions<TVariables>, 'query' | 'variables'> {
+  > extends Omit<WatchQueryOptions<TVariables>, 'query' | 'variables'> {
   clientId?: string
   enabled?: boolean
   throttle?: number
@@ -51,10 +50,10 @@ export interface UseQueryReturn<TResult, TVariables> {
   fetchMore: <K extends keyof TVariables>(options: FetchMoreQueryOptions<TVariables, K> & FetchMoreOptions<TResult, TVariables>) => Promise<ApolloQueryResult<TResult>>
   subscribeToMore: <TSubscriptionVariables = OperationVariables, TSubscriptionData = TResult>(options: SubscribeToMoreOptions<TResult, TSubscriptionVariables, TSubscriptionData> | Ref<SubscribeToMoreOptions<TResult, TSubscriptionVariables, TSubscriptionData>> | ReactiveFunction<SubscribeToMoreOptions<TResult, TSubscriptionVariables, TSubscriptionData>>) => void
   onResult: (fn: (param?: ApolloQueryResult<TResult>) => void) => {
-      off: () => void
+    off: () => void
   }
   onError: (fn: (param?: Error) => void) => {
-      off: () => void
+    off: () => void
   }
 }
 
@@ -94,14 +93,14 @@ export function useQuery<TResult = any, TVariables extends OperationVariables = 
 export function useQuery<
   TResult,
   TVariables extends OperationVariables
-> (
+>(
   document: DocumentNode | Ref<DocumentNode> | ReactiveFunction<DocumentNode>,
   variables?: TVariables | Ref<TVariables> | ReactiveFunction<TVariables>,
   options?: UseQueryOptions<TResult, TVariables> | Ref<UseQueryOptions<TResult, TVariables>> | ReactiveFunction<UseQueryOptions<TResult, TVariables>>,
 ): UseQueryReturn<TResult, TVariables> {
   // Is on server?
   const vm = getCurrentInstance()
-  const isServer = vm.$isServer
+  const isServer = false;
 
   if (variables == null) variables = ref()
   if (options == null) options = {}
@@ -130,10 +129,10 @@ export function useQuery<
   // SSR
   let firstResolve: Function
   let firstReject: Function
-  onServerPrefetch(() => new Promise((resolve, reject) => {
-    firstResolve = resolve
-    firstReject = reject
-  }).then(stop).catch(stop))
+  // onServerPrefetch(() => new Promise((resolve, reject) => {
+  //   firstResolve = resolve
+  //   firstReject = reject
+  // }).then(stop).catch(stop))
 
   // Apollo Client
   const { resolveClient } = useApolloClient()
@@ -147,7 +146,7 @@ export function useQuery<
   /**
    * Starts watching the query
    */
-  function start () {
+  function start() {
     if (started || !isEnabled.value) return
     if (isServer && currentOptions.value.prefetch === false) return
 
@@ -182,7 +181,7 @@ export function useQuery<
     }
   }
 
-  function startQuerySubscription () {
+  function startQuerySubscription() {
     if (observer && !observer.closed) return
     if (!query.value) return
 
@@ -193,7 +192,7 @@ export function useQuery<
     })
   }
 
-  function onNextResult (queryResult: ApolloQueryResult<TResult>) {
+  function onNextResult(queryResult: ApolloQueryResult<TResult>) {
     processNextResult(queryResult)
 
     // Result errors
@@ -214,14 +213,14 @@ export function useQuery<
     }
   }
 
-  function processNextResult (queryResult: ApolloQueryResult<TResult>) {
+  function processNextResult(queryResult: ApolloQueryResult<TResult>) {
     result.value = queryResult.data && Object.keys(queryResult.data).length === 0 ? null : queryResult.data
     loading.value = queryResult.loading
     networkStatus.value = queryResult.networkStatus
     resultEvent.trigger(queryResult)
   }
 
-  function onError (queryError: any) {
+  function onError(queryError: any) {
     processNextResult(query.value.getCurrentResult() as ApolloQueryResult<TResult>)
     processError(queryError)
     if (firstReject) {
@@ -233,14 +232,14 @@ export function useQuery<
     resubscribeToQuery()
   }
 
-  function processError (queryError: any) {
+  function processError(queryError: any) {
     error.value = queryError
     loading.value = false
     networkStatus.value = 8
     errorEvent.trigger(queryError)
   }
 
-  function resubscribeToQuery () {
+  function resubscribeToQuery() {
     if (!query.value) return
     const lastError = query.value.getLastError()
     const lastResult = query.value.getLastResult()
@@ -254,7 +253,7 @@ export function useQuery<
   /**
    * Stop watching the query
    */
-  function stop () {
+  function stop() {
     if (!started) return
     started = false
     loading.value = false
@@ -278,10 +277,10 @@ export function useQuery<
   /**
    * Queue a restart of the query (on next tick) if it is already active
    */
-  function baseRestart () {
+  function baseRestart() {
     if (!started || restarting) return
     restarting = true
-    Vue.nextTick(() => {
+    nextTick(() => {
       if (started) {
         stop()
         start()
@@ -292,7 +291,7 @@ export function useQuery<
 
   let debouncedRestart: Function
   let isRestartDebounceSetup = false
-  function updateRestartFn () {
+  function updateRestartFn() {
     // On server, will be called before currentOptions is initialized
     // @TODO investigate
     if (!currentOptions) {
@@ -309,7 +308,7 @@ export function useQuery<
     }
   }
 
-  function restart () {
+  function restart() {
     if (!isRestartDebounceSetup) updateRestartFn()
     debouncedRestart()
   }
@@ -319,7 +318,7 @@ export function useQuery<
   watch(documentRef, value => {
     currentDocument = value
     restart()
-  })
+  }, { immediate: true })
 
   // Applying variables
   let currentVariables: TVariables
@@ -333,6 +332,7 @@ export function useQuery<
     currentVariablesSerialized = serialized
   }, {
     deep: true,
+    immediate: true,
   })
 
   // Applying options
@@ -348,11 +348,12 @@ export function useQuery<
     restart()
   }, {
     deep: true,
+    immediate: true,
   })
 
   // Fefetch
 
-  function refetch (variables: TVariables = null) {
+  function refetch(variables: TVariables = null) {
     if (query.value) {
       if (variables) {
         currentVariables = variables
@@ -363,7 +364,7 @@ export function useQuery<
 
   // Fetch more
 
-  function fetchMore<K extends keyof TVariables> (options: FetchMoreQueryOptions<TVariables, K> & FetchMoreOptions<TResult, TVariables>) {
+  function fetchMore<K extends keyof TVariables>(options: FetchMoreQueryOptions<TVariables, K> & FetchMoreOptions<TResult, TVariables>) {
     if (query.value) {
       return query.value.fetchMore(options)
     }
@@ -376,7 +377,7 @@ export function useQuery<
   function subscribeToMore<
     TSubscriptionVariables = OperationVariables,
     TSubscriptionData = TResult
-  > (
+  >(
     options: SubscribeToMoreOptions<TResult, TSubscriptionVariables, TSubscriptionData> |
       Ref<SubscribeToMoreOptions<TResult, TSubscriptionVariables, TSubscriptionData>> |
       ReactiveFunction<SubscribeToMoreOptions<TResult, TSubscriptionVariables, TSubscriptionData>>
@@ -403,7 +404,7 @@ export function useQuery<
     })
   }
 
-  function addSubscribeToMore (item: SubscribeToMoreItem) {
+  function addSubscribeToMore(item: SubscribeToMoreItem) {
     if (!started) return
     const unsubscribe = query.value.subscribeToMore(item.options)
     onStopHandlers.push(unsubscribe)
@@ -430,7 +431,7 @@ export function useQuery<
     } else {
       stop()
     }
-  })
+  }, { immediate: true })
 
   // Teardown
   onBeforeUnmount(() => {

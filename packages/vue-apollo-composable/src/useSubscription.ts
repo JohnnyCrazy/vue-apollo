@@ -1,6 +1,4 @@
 import { DocumentNode } from 'graphql'
-import Vue from 'vue'
-import { Ref, ref, watch, isRef, computed, getCurrentInstance, onBeforeUnmount } from '@vue/composition-api'
 import { OperationVariables, SubscriptionOptions } from 'apollo-client'
 import { Observable, Subscription } from 'apollo-client/util/Observable'
 import { FetchResult } from 'apollo-link'
@@ -11,11 +9,12 @@ import { paramToReactive } from './util/paramToReactive'
 import { useApolloClient } from './useApolloClient'
 import { useEventHook } from './util/useEventHook'
 import { trackSubscription } from './util/loadingTracking'
+import { nextTick, Ref, getCurrentInstance, ref, isRef, watch, computed, onBeforeUnmount } from 'vue'
 
-export interface UseSubscriptionOptions <
+export interface UseSubscriptionOptions<
   TResult = any,
   TVariables = OperationVariables
-> extends Omit<SubscriptionOptions<TVariables>, 'query' | 'variables'> {
+  > extends Omit<SubscriptionOptions<TVariables>, 'query' | 'variables'> {
   clientId?: string
   enabled?: boolean
   throttle?: number
@@ -34,10 +33,10 @@ export interface UseSubscriptionReturn<TResult, TVariables> {
   options: UseSubscriptionOptions<TResult, TVariables> | Ref<UseSubscriptionOptions<TResult, TVariables>>
   subscription: Ref<Observable<FetchResult<TResult, Record<string, any>, Record<string, any>>>>
   onResult: (fn: (param?: FetchResult<TResult, Record<string, any>, Record<string, any>>) => void) => {
-      off: () => void
+    off: () => void
   }
   onError: (fn: (param?: Error) => void) => {
-      off: () => void
+    off: () => void
   }
 }
 
@@ -75,17 +74,17 @@ export function useSubscription<TResult = any, TVariables extends OperationVaria
   options: UseSubscriptionOptions<TResult, TVariables> | Ref<UseSubscriptionOptions<TResult, TVariables>> | ReactiveFunction<UseSubscriptionOptions<TResult, TVariables>>
 ): UseSubscriptionReturn<TResult, TVariables>
 
-export function useSubscription <
+export function useSubscription<
   TResult,
   TVariables
-> (
+>(
   document: DocumentNode | Ref<DocumentNode> | ReactiveFunction<DocumentNode>,
   variables: TVariables | Ref<TVariables> | ReactiveFunction<TVariables> = null,
   options: UseSubscriptionOptions<TResult, TVariables> | Ref<UseSubscriptionOptions<TResult, TVariables>> | ReactiveFunction<UseSubscriptionOptions<TResult, TVariables>> = null
 ): UseSubscriptionReturn<TResult, TVariables> {
   // Is on server?
   const vm = getCurrentInstance()
-  const isServer = vm.$isServer
+  const isServer = false;
 
   if (variables == null) variables = ref()
   if (!options) options = {}
@@ -108,7 +107,7 @@ export function useSubscription <
   let observer: Subscription
   let started = false
 
-  function start () {
+  function start() {
     if (started || !isEnabled.value || isServer) return
     started = true
     loading.value = true
@@ -127,19 +126,19 @@ export function useSubscription <
     })
   }
 
-  function onNextResult (fetchResult: FetchResult<TResult>) {
+  function onNextResult(fetchResult: FetchResult<TResult>) {
     result.value = fetchResult.data
     loading.value = false
     resultEvent.trigger(fetchResult)
   }
 
-  function onError (fetchError: any) {
+  function onError(fetchError: any) {
     error.value = fetchError
     loading.value = false
     errorEvent.trigger(fetchError)
   }
 
-  function stop () {
+  function stop() {
     if (!started) return
     started = false
     loading.value = false
@@ -159,10 +158,10 @@ export function useSubscription <
   /**
    * Queue a restart of the query (on next tick) if it is already active
    */
-  function baseRestart () {
+  function baseRestart() {
     if (!started || restarting) return
     restarting = true
-    Vue.nextTick(() => {
+    nextTick(() => {
       if (started) {
         stop()
         start()
@@ -172,7 +171,7 @@ export function useSubscription <
   }
 
   let debouncedRestart: Function
-  function updateRestartFn () {
+  function updateRestartFn() {
     if (currentOptions.value.throttle) {
       debouncedRestart = throttle(currentOptions.value.throttle, baseRestart)
     } else if (currentOptions.value.debounce) {
@@ -182,7 +181,7 @@ export function useSubscription <
     }
   }
 
-  function restart () {
+  function restart() {
     if (!debouncedRestart) updateRestartFn()
     debouncedRestart()
   }

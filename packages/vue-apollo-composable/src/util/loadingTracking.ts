@@ -1,4 +1,4 @@
-import { Ref, watch, onUnmounted, ref, getCurrentInstance, onBeforeUnmount } from '@vue/composition-api'
+import { Ref, getCurrentInstance, ref, onUnmounted, watch, onBeforeUnmount } from "vue"
 
 export interface LoadingTracking {
   queries: Ref<number>
@@ -10,8 +10,8 @@ export interface AppLoadingTracking extends LoadingTracking {
   components: Map<any, LoadingTracking>
 }
 
-export function getAppTracking () {
-  const root: any = getCurrentInstance().$root
+export function getAppTracking() {
+  const root: any = getCurrentInstance().root
   let appTracking: AppLoadingTracking
 
   if (!root._apolloAppTracking) {
@@ -31,10 +31,10 @@ export function getAppTracking () {
   }
 }
 
-export function getCurrentTracking () {
+export function getCurrentTracking() {
   const { appTracking } = getAppTracking()
   const currentInstance = getCurrentInstance()
-  
+
   let tracking: LoadingTracking
 
   if (!appTracking.components.has(currentInstance)) {
@@ -58,7 +58,7 @@ export function getCurrentTracking () {
   }
 }
 
-function track (loading: Ref<boolean>, type: keyof LoadingTracking) {
+function track(loading: Ref<boolean>, type: keyof LoadingTracking) {
   const { appTracking, tracking } = getCurrentTracking()
 
   watch(loading, (value, oldValue) => {
@@ -77,14 +77,14 @@ function track (loading: Ref<boolean>, type: keyof LoadingTracking) {
   })
 }
 
-export function trackQuery (loading: Ref<boolean>) {
+export function trackQuery(loading: Ref<boolean>) {
   track(loading, 'queries')
 }
 
-export function trackMutation (loading: Ref<boolean>) {
+export function trackMutation(loading: Ref<boolean>) {
   track(loading, 'mutations')
 }
 
-export function trackSubscription (loading: Ref<boolean>) {
+export function trackSubscription(loading: Ref<boolean>) {
   track(loading, 'subscriptions')
 }

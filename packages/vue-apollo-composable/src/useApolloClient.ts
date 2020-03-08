@@ -1,5 +1,5 @@
-import { inject } from '@vue/composition-api'
 import ApolloClient from 'apollo-client'
+import { inject } from 'vue'
 
 export const DefaultApolloClient = Symbol('default-apollo-client')
 export const ApolloClients = Symbol('apollo-clients')
@@ -9,11 +9,11 @@ export interface UseApolloClientReturn<TCacheShape> {
   readonly client: ApolloClient<TCacheShape>
 }
 
-export function useApolloClient<TCacheShape = any> (clientId?: string): UseApolloClientReturn<TCacheShape> {
+export function useApolloClient<TCacheShape = any>(clientId?: string): UseApolloClientReturn<TCacheShape> {
   const providedApolloClients: { [key: string]: ApolloClient<TCacheShape> } = inject(ApolloClients, null)
   const providedApolloClient: ApolloClient<TCacheShape> = inject(DefaultApolloClient, null)
 
-  function resolveClient (clientId: string = null): ApolloClient<TCacheShape> {
+  function resolveClient(clientId: string = null): ApolloClient<TCacheShape> {
     let resolvedClient
     if (clientId) {
       if (!providedApolloClients) {
@@ -36,7 +36,7 @@ export function useApolloClient<TCacheShape = any> (clientId?: string): UseApoll
 
   return {
     resolveClient,
-    get client () {
+    get client() {
       return resolveClient(clientId)
     }
   }
